@@ -9,8 +9,8 @@ class FastGrid:
         self.data = [fill] * (width * height)
 
     def get(self, x, y):
-        if 0 <= x < self.width and 0<= y < self.height
-        return self.data[y * self.width + x]
+        if 0 <= x < self.width and 0<= y < self.height:
+            return self.data[y * self.width + x]
 
     def set(self, x, y, value):
         self.data[y * self.width + x] = value
@@ -31,6 +31,7 @@ class Automata(ABC):
         self.state = initial_state
         self.grid = None
         self.live_cells = set()
+        self.live_cells_neighbours = dict()
 
     def create_grid(self):
         self.grid = FastGrid(self.width, self.height)
@@ -91,13 +92,33 @@ class Automata(ABC):
         cy = self.height // 2
         self.update_grid(cx, cy, True)
 
+    def count_neighbours(self):
+        neighbours_list = []  # List of lists for each cell's neighbors
+        neighbor_offsets = [
+            (-1, -1), (-1, 0), (-1, 1),
+            (0, -1),           (0, 1),
+            (1, -1),  (1, 0),  (1, 1)
+        ]
+        
+        for cell in self.live_cells:
+            neighbours = []  # List for neighbors of the current cell
+            for row_offset, col_offset in neighbor_offsets:
+                neighbour = self.grid.get(cell[0] + row_offset, cell[1] + col_offset)
+                # Keep all neighbors, including None for out-of-bounds (mantains same lenght to avoid storing coords)
+                neighbours.append(neighbour)
+            neighbours_list.append(neighbours)
+            
+        return neighbours_list
+
+    def build_neighbours_dict(self):
+        neighbours = self.count_neighbours(self)
+        pass
+
     @abstractmethod
     def run_automata(self):
         pass
 
-    @abstractmethod
-    def count_neighbours(self, x, y):
-        pass
+
 
 class Conways(Automata):
     def __init__(self, width, height, generations, initial_state=None):
@@ -105,10 +126,4 @@ class Conways(Automata):
 
     def run_automata(self):
         pass
-
-    def count_neighbours(self):
-        pass
-
-    
-
 
