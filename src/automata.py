@@ -9,6 +9,7 @@ class FastGrid:
         self.data = [fill] * (width * height)
 
     def get(self, x, y):
+        if 0 <= x < self.width and 0<= y < self.height
         return self.data[y * self.width + x]
 
     def set(self, x, y, value):
@@ -22,13 +23,14 @@ class FastGrid:
         return '\n'.join(lines)
 
 class Automata(ABC):
-    FastGrid grid = None
     def __init__(self, name: str, height: int, width: int, generations: int, initial_state: Optional[list] = None):
         self.name = name
         self.width = width
         self.height = height
         self.generations = generations
         self.state = initial_state
+        self.grid = None
+        self.live_cells = set()
 
     def create_grid(self):
         self.grid = FastGrid(self.width, self.height)
@@ -36,18 +38,24 @@ class Automata(ABC):
     def set_initial_state(self):
         #'Block' 'Glider' 'Random' 'Single'
         if self.state == 'Block':
-            place_block()
+            self.place_block()
         elif self.state == 'Glider':
-            place_glider()
+            self.place_glider()
         elif self.state == 'Random':
-            place_random()
+            self.place_random()
         elif self.state == 'Single':
-            place_single()
+            self.place_single()
         else:
             raise ValueError(f"Unknown state: {self.state}")
 
     def update_grid(self, x, y, state: bool):
         self.grid.set(x, y, state)
+        cell = (x,y)
+        if state:
+            self.live_cells.add(cell)
+        else:
+            self.live_cells.discard(cell)
+           
 
     def get_cell(self, x, y):
         return self.grid.get(x,y)
@@ -58,17 +66,17 @@ class Automata(ABC):
         
         for y in range (-1,2):
             for x in range (-1,2):
-                self.grid.set(hh + x, hw +y, True)
+                self.update_grid(hh + x, hw +y, True)
     
     def place_glider(self):
         cx = self.width // 2
         cy = self.height // 2
 
-        self.grid.set(cx + 1, cy,     True)
-        self.grid.set(cx + 2, cy + 1, True)
-        self.grid.set(cx,     cy + 2, True)
-        self.grid.set(cx + 1, cy + 2, True)
-        self.grid.set(cx + 2, cy + 2, True)
+        self.update_grid(cx + 1, cy,     True)
+        self.update_grid(cx + 2, cy + 1, True)
+        self.update_grid(cx,     cy + 2, True)
+        self.update_grid(cx + 1, cy + 2, True)
+        self.update_grid(cx + 2, cy + 2, True)
       
     def place_random(self):
         life_max = random.randint(0, (self.width * self.height) - 1)
@@ -76,12 +84,12 @@ class Automata(ABC):
         for life in range(life_max):
             x = random.randint(0, self.width - 1)
             y = random.randint(0, self.height - 1)
-            self.grid.set(x, y, True)
+            self.update_grid(x, y, True)
     
     def place_single(self):
         cx = self.width // 2
         cy = self.height // 2
-        self.grid.set(cx, cy, True)
+        self.update_grid(cx, cy, True)
 
     @abstractmethod
     def run_automata(self):
