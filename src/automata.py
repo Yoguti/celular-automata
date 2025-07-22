@@ -37,16 +37,7 @@ class Automata(ABC):
         self.initial_state = initial_state
         self.grid = None
         self.live_cells = set()
-        self.live_cells_neighbours = dict()
         self.create_grid()
-
-    def set_cell(self, x, y, state):
-        if 0 <= x < self.width and 0 <= y < self.height:
-            self.grid.set(x, y, state)
-            if not state:
-                cell = (x, y)
-                self.live_cells_neighbours.pop(cell, None)
-
 
     def set_initial_state(self):
         #'Block' 'Glider' 'Random' 'Single'
@@ -62,7 +53,9 @@ class Automata(ABC):
             raise ValueError(f"Unknown state: {self.initial_state}")
 
     def update_grid(self, x, y, state: bool):
-        self.set_cell(x, y, state)
+        if 0 <= x < self.width and 0 <= y < self.height:
+            self.grid.set(x, y, state)
+
         cell = (x,y)
         if state:
             self.live_cells.add(cell)
@@ -104,24 +97,6 @@ class Automata(ABC):
         cy = self.height // 2
         self.update_grid(cx, cy, True)
 
-    def count_neighbours(self):
-        neighbor_offsets = [
-            (-1, -1), (-1, 0), (-1, 1),
-            (0, -1),           (0, 1),
-            (1, -1),  (1, 0),  (1, 1)
-        ]
-        
-        for cell in self.live_cells:
-            neighbours = []  # List for neighbors of the current cell
-            for row_offset, col_offset in neighbor_offsets:
-                neighbour = self.grid.get(cell[0] + row_offset, cell[1] + col_offset)
-                # Keep all neighbors, including None for out-of-bounds (mantains same lenght to avoid storing coords)
-                neighbours.append(neighbour)
-            self.live_cells_neighbours[cell] = neighbours
-    
-    def get_neighbours(self, x, y):
-        return self.live_cells_neighbours.get((x, y), [])
-
     @abstractmethod
     def run_automata(self):
         pass
@@ -131,11 +106,43 @@ class Conways(Automata):
         super().__init__('Conway', width, height, generations, initial_state)
 
     def run_automata(self):
+        neighbor_offsets = [
+        (-1, -1), (-1, 0), (-1, 1),
+        (0, -1),           (0, 1),
+        (1, -1),  (1, 0),  (1, 1)
+        ]
+            
         for generation in range(self.generations):
-            self.count_neighbours()
-            #here im going to loop trough each cell in living cells and start applying the rules
+            dead_neighbor_counts = defaultdict(int)
+            next_live_cells = set()
+
+            for x, y in self.live_cells:
+                live_neighbours = 0
+
+                for dx, dy in neighbor_offsets:
+                    nx = x + dx
+                    ny = y + dy
+
+                    if self.get_cell(nx, ny):
+                        live_neighbours += 1
+                    else:
+                        dead_neighbor_counts[(nx, ny)] += 1 #Each time a live cell sees a dead neighbor, that dead neighbor’s count increases by 1.
 
 
+                if live_neighbours in [2, 3]:
+                    next_live_cells.add((x,y)) # Rules 1, 2, 3
+                
+            for (x, y), count in dead_neighbor_counts.items():
+                if count == 3:  # Rule 4
+                    next_live_cells.add((x, y))
+            
+            self.live_cells.clear()
+            for x, y in self.live_cells:
+                self.set_cell(x, y, False) #only clear cells that were alive
 
-#other implementations will come here (other automata rules)
-#judge my code, in the implementation of the rules, the user should mostly just interact with get and set cell AND get neighbours
+
+            for x, y in next_live_cells:
+                self.update_grid(x, y, True)
+
+            
+        
