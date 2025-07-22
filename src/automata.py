@@ -1,6 +1,7 @@
 import random
 from abc import ABC, abstractmethod
 from typing import Optional
+from collections import defaultdict
 
 class FastGrid:
     def __init__(self, width, height, fill: bool =False):
@@ -13,7 +14,9 @@ class FastGrid:
             return self.data[y * self.width + x]
 
     def set(self, x, y, value):
-        self.data[y * self.width + x] = value
+        if 0 <= x < self.width and 0 <= y < self.height:
+            self.data[y * self.width + x] = value
+
 
     def __str__(self): 
         lines = []
@@ -23,34 +26,43 @@ class FastGrid:
         return '\n'.join(lines)
 
 class Automata(ABC):
+    def create_grid(self):
+        self.grid = FastGrid(self.width, self.height)
+
     def __init__(self, name: str, height: int, width: int, generations: int, initial_state: Optional[list] = None):
         self.name = name
         self.width = width
         self.height = height
         self.generations = generations
-        self.state = initial_state
+        self.initial_state = initial_state
         self.grid = None
         self.live_cells = set()
         self.live_cells_neighbours = dict()
+        self.create_grid()
 
-    def create_grid(self):
-        self.grid = FastGrid(self.width, self.height)
+    def set_cell(self, x, y, state):
+        if 0 <= x < self.width and 0 <= y < self.height:
+            self.grid.set(x, y, state)
+            if not state:
+                cell = (x, y)
+                self.live_cells_neighbours.pop(cell, None)
+
 
     def set_initial_state(self):
         #'Block' 'Glider' 'Random' 'Single'
-        if self.state == 'Block':
+        if self.initial_state == 'Block':
             self.place_block()
-        elif self.state == 'Glider':
+        elif self.initial_state == 'Glider':
             self.place_glider()
-        elif self.state == 'Random':
+        elif self.initial_state == 'Random':
             self.place_random()
-        elif self.state == 'Single':
+        elif self.initial_state == 'Single':
             self.place_single()
         else:
-            raise ValueError(f"Unknown state: {self.state}")
+            raise ValueError(f"Unknown state: {self.initial_state}")
 
     def update_grid(self, x, y, state: bool):
-        self.grid.set(x, y, state)
+        self.set_cell(x, y, state)
         cell = (x,y)
         if state:
             self.live_cells.add(cell)
@@ -93,7 +105,6 @@ class Automata(ABC):
         self.update_grid(cx, cy, True)
 
     def count_neighbours(self):
-        neighbours_list = []  # List of lists for each cell's neighbors
         neighbor_offsets = [
             (-1, -1), (-1, 0), (-1, 1),
             (0, -1),           (0, 1),
@@ -106,24 +117,25 @@ class Automata(ABC):
                 neighbour = self.grid.get(cell[0] + row_offset, cell[1] + col_offset)
                 # Keep all neighbors, including None for out-of-bounds (mantains same lenght to avoid storing coords)
                 neighbours.append(neighbour)
-            neighbours_list.append(neighbours)
-            
-        return neighbours_list
-
-    def build_neighbours_dict(self):
-        neighbours = self.count_neighbours(self)
-        pass
+            self.live_cells_neighbours[cell] = neighbours
+    
+    def get_neighbours(self, x, y):
+        return self.live_cells_neighbours.get((x, y), [])
 
     @abstractmethod
     def run_automata(self):
         pass
-
-
 
 class Conways(Automata):
     def __init__(self, width, height, generations, initial_state=None):
         super().__init__('Conway', width, height, generations, initial_state)
 
     def run_automata(self):
-        pass
+        for generation in range(self.generations):
+            self.count_neighbours()
+            #here im going to loop trough each cell in living cells and start applying the rules
 
+
+
+#other implementations will come here (other automata rules)
+#judge my code, in the implementation of the rules, the user should mostly just interact with get and set cell AND get neighbours
