@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+import automata
 
 class CellularAutomataSimulator:
     def __init__(self):
